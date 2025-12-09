@@ -1,27 +1,27 @@
 # script3.ps1
-function New-FolderCreation {
+function New-FolderCreation {  #Define una funcion llamada New-FolderCreation
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
         [string]$foldername
     )
 
-    # Create absolute path for the folder relative to current location
-    $logpath = Join-Path -Path (Get-Location).Path -ChildPath $foldername
-    if (-not (Test-Path -Path $logpath)) {
+    # Crear una ruta absoluta para la carpeta en relación con la ubicación actual
+    $logpath = Join-Path -Path (Get-Location).Path -ChildPath $foldername  #(Get-Location).Path: Obtiene la ruta de la carpeta donde se está ejecutando el script y el Join-Path combina esa ruta con el $foldername
+    if (-not (Test-Path -Path $logpath)) {  #Se ecarga de verificar si la carpeta ya existe
         New-Item -Path $logpath -ItemType Directory -Force | Out-Null
     }
 
-    return $logpath
+    return $logpath   #Devuelve la ruta absoluta
 }
 
 function Write-Log {
     [CmdletBinding()]
     param(
-        # Create parameter set
-        [Parameter(Mandatory = $true, ParameterSetName = 'Create')]
+        # Crear conjunto de parámetros
+        [Parameter(Mandatory = $true, ParameterSetName = 'Create')]    #Create se utiliza para crear uno o más archivos de registro nuevos con formato de fecha y hora
         [Alias('Names')]
-        [object]$Name,                    # can be single string or array
+        [object]$Name,                    # Puede ser una sola cadena o una matriz
 
         [Parameter(Mandatory = $true, ParameterSetName = 'Create')]
         [string]$Ext,
@@ -32,12 +32,12 @@ function Write-Log {
         [Parameter(ParameterSetName = 'Create', Position = 0)]
         [switch]$Create,
 
-        # Message parameter set
-        [Parameter(Mandatory = $true, ParameterSetName = 'Message')]
-        [string]$message,
+        # Conjunto de parámetros de mensaje
+        [Parameter(Mandatory = $true, ParameterSetName = 'Message')]  #Conjunto de Parámetros Message el cual se utiliza para agregar un mensaje a un archivo de registro existente
+        [string]$message,       #El texto del mensaje que se registrará
 
         [Parameter(Mandatory = $true, ParameterSetName = 'Message')]
-        [string]$path,
+        [string]$path,   #La ruta completa del archivo
 
         [Parameter(Mandatory = $false, ParameterSetName = 'Message')]
         [ValidateSet('Information','Warning','Error')]
@@ -47,41 +47,41 @@ function Write-Log {
         [switch]$MSG
     )
 
-    switch ($PsCmdlet.ParameterSetName) {
-        "Create" {
+    switch ($PsCmdlet.ParameterSetName) {         #determina qué bloque de código ejecutar basándose en el conjunto de parámetros utilizados asl llamar la funcion
+        "Create" {   #
             $created = @()
 
-            # Normalize $Name to an array
+            # Normalizar $Name a una matriz
             $namesArray = @()
             if ($null -ne $Name) {
-                if ($Name -is [System.Array]) { $namesArray = $Name }
+                if ($Name -is [System.Array]) { $namesArray = $Name }      #Normaliza la entrada $Name a una matriz ($namesArray) para que tdodo funcione bien 
                 else { $namesArray = @($Name) }
             }
 
-            # Date + time formatting (safe for filenames)
-            $date1 = (Get-Date -Format "yyyy-MM-dd")
-            $time  = (Get-Date -Format "HH-mm-ss")
+            # Formato de fecha y hora (seguro para nombres de archivos)
+            $date1 = (Get-Date -Format "yyyy-MM-dd")  #Genera las cadenas de fecha y hora en un formato seguro
+            $time  = (Get-Date -Format "HH-mm-ss")  
 
-            # Ensure folder exists and get absolute folder path
-            $folderPath = New-FolderCreation -foldername $folder
+            # Asegúrese de que la carpeta exista y obtenga la ruta absoluta de la carpeta
+            $folderPath = New-FolderCreation -foldername $folder  #Hace el llamado de la priera funcion creada en este codigo 
 
-            foreach ($n in $namesArray) {
+            foreach ($n in $namesArray) {  #Inicia un bucle para procesar todos los nombres de los archivos 
                 # sanitize name to string
                 $baseName = [string]$n
 
-                # Build filename
+                # Crear nombre de archivo
                 $fileName = "${baseName}_${date1}_${time}.$Ext"
 
-                # Full path for file
+                # Ruta completa para el archivo
                 $fullPath = Join-Path -Path $folderPath -ChildPath $fileName
 
-                # Create the file (New-Item -Force will create or overwrite; use -ErrorAction Stop to catch errors)
+                # Crea el archivo (New-Item -Force lo creará o sobrescribirá; usa -ErrorAction Stop para detectar errores)
                 try {
-                    # If you prefer to NOT overwrite existing file, use: if (-not (Test-Path $fullPath)) { New-Item ... }
+                    # Si prefiere NO sobrescribir el archivo existente, utilice: if (-not (Test-Path $fullPath)) { New-Item ... }
                     New-Item -Path $fullPath -ItemType File -Force -ErrorAction Stop | Out-Null
 
-                    # Optionally write a header line (uncomment if desired)
-                    # "Log created: $(Get-Date)" | Out-File -FilePath $fullPath -Encoding UTF8 -Append
+                    # Opcionalmente, escriba una línea de encabezado (descoméntela si lo desea)
+                    # "Registro creado: $(Get-Date)" | Archivo de salida - Ruta de archivo $ Ruta completa - Codificación UTF8 - Anexar
 
                     $created += $fullPath
                 }
@@ -94,8 +94,8 @@ function Write-Log {
         }
 
         "Message" {
-            # Ensure directory for message file exists
-            $parent = Split-Path -Path $path -Parent
+            # Asegúrese de que exista el directorio para el archivo de mensajes
+            $parent = Split-Path -Path $path -Parent   #Verifica la existencia de la carpeta padre 
             if ($parent -and -not (Test-Path -Path $parent)) {
                 New-Item -Path $parent -ItemType Directory -Force | Out-Null
             }
@@ -103,14 +103,14 @@ function Write-Log {
             $date = Get-Date
             $concatmessage = "|$date| |$message| |$Severity|"
 
-            switch ($Severity) {
+            switch ($Severity) {        #imprime el mensaje en la consola con el color correspondiente
                 "Information" { Write-Host $concatmessage -ForegroundColor Green }
                 "Warning"     { Write-Host $concatmessage -ForegroundColor Yellow }
                 "Error"       { Write-Host $concatmessage -ForegroundColor Red }
             }
 
-            # Append message to the specified path (creates file if it does not exist)
-            Add-Content -Path $path -Value $concatmessage -Force
+            # Añadir mensaje a la ruta especificada (crea un archivo si no existe)
+            Add-Content -Path $path -Value $concatmessage -Force   #Escribe la línea de registro formateada
 
             return $path
         }
